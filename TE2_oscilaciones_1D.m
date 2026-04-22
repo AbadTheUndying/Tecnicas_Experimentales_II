@@ -238,63 +238,8 @@ sgtitle('\bf Sensibilidad y Decaimiento del Campo Magnetico', 'FontSize', 14);
 fprintf('\n--- LEY DE DECAIMIENTO MAGNETICO (EXPONENCIAL) ---\n');
 fprintf('El voltaje decae exponencialmente con coeficiente de atenuacion alpha = %.3f cm^-1\n\n', alpha);
 
-
 %% ========================================================================
-% 4. RECONSTRUCCIÓN DE LA AMPLITUD MECÁNICA (TEORÍA VS EXPERIMENTO)
-% ========================================================================
-% Según la sección 3.5 del Fundamento Teórico: V_max es proporcional a A*omega.
-% Por tanto, la amplitud mecánica relativa es A_rel = V / (2 * pi * f).
-
-% Usaremos los datos de R = 100 Ohms como ejemplo representativo
-f_R100 = [41.50, 41.55, 41.60, 41.65, 41.70, 41.75, 41.80, 41.85, 41.90, 41.95, ...
-          42.00, 42.05, 42.10, 42.15, 42.20, 42.25, 42.30, 42.35, 42.40, 42.45, ...
-          42.47, 42.48, 42.50, 42.55, 42.60, 42.65, 42.70];
-V_R100 = [2.0, 2.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 3.0, 4.0, ...
-          5.0, 7.0, 9.0, 11.0, 15.0, 16.0, 21.0, 25.0, 29.0, 6.0, ...
-          5.0, 5.0, 5.0, 4.0, 3.0, 3.0, 2.0];
-
-% Calculamos la amplitud mecánica relativa
-omega = 2 * pi * f_R100;
-Amplitud_relativa = V_R100 ./ omega;
-
-% Normalizamos para que el máximo sea 1 (facilita la visualización del perfil)
-Amplitud_norm = Amplitud_relativa / max(Amplitud_relativa);
-V_norm = V_R100 / max(V_R100);
-
-figure('Name', 'Reconstruccion Amplitud', 'Color', 'w', 'Position', [250, 250, 700, 500]);
-hold on; grid on; box on;
-
-% Interpolaciones suaves para mejor visualización
-f_fit = linspace(min(f_R100), max(f_R100), 1000);
-A_fit = spline(f_R100, Amplitud_norm, f_fit);
-V_fit = spline(f_R100, V_norm, f_fit);
-
-% Dibujamos Voltaje vs Amplitud Reconstruida
-plot(f_fit, V_fit, 'b-', 'DisplayName', 'Señal Eléctrica (V_{rms} normalizado)');
-plot(f_fit, A_fit, 'r-', 'DisplayName', 'Amplitud Mecánica Reconstruida (A normalizada)');
-
-% Marcamos los puntos experimentales
-scatter(f_R100, V_norm, 30, 'b', 'filled', 'HandleVisibility', 'off');
-scatter(f_R100, Amplitud_norm, 30, 'r', 's', 'filled', 'HandleVisibility', 'off');
-
-xlabel('Frecuencia de excitacion f (Hz)');
-ylabel('Respuesta Normalizada (Adimensional)');
-title('Comparativa: Señal Eléctrica vs Amplitud Mecánica Reconstruida');
-legend('Location', 'northwest');
-
-% --- Análisis del desplazamiento del pico ---
-[~, idx_V] = max(V_fit);
-[~, idx_A] = max(A_fit);
-f_res_V = f_fit(idx_V);
-f_res_A = f_fit(idx_A);
-
-fprintf('\n--- RECONSTRUCCIÓN DE LA AMPLITUD MECÁNICA ---\n');
-fprintf('Frecuencia de pico del Voltaje: %.3f Hz\n', f_res_V);
-fprintf('Frecuencia de pico de la Amplitud Mecanica: %.3f Hz\n', f_res_A);
-fprintf('Diferencia: %.3f Hz\n\n', f_res_V - f_res_A);
-
-%% ========================================================================
-% 5. AJUSTE TEORICO: LORENTZIANA (AJUSTE A LA SUBIDA LINEAL)
+% 5. AJUSTE TEORICO: LORENTZIANA (AJUSTE LIBRE A LA COLA LINEAL)
 % ========================================================================
 
 f_data = f_R100;
@@ -304,216 +249,200 @@ A_data = V_R100 ./ (2 * pi * f_data); % Amplitud mecanica relativa
 A_max_real = max(A_data);
 A_data_norm = A_data / A_max_real;
 
-% ANCLAMOS LA FRECUENCIA DE RESONANCIA
+% IDENTIFICAR EL PICO DUFFING (Solo como referencia visual)
 [A_max_exp, idx_max] = max(A_data_norm);
-f0_fijo = f_data(idx_max); 
+f0_duffing = f_data(idx_max); 
 
-% Filtramos los datos para ajustar solo la parte izquierda (subida)
-% Esto evita que la caida asimetrica (no-linealidad) rompa el ajuste
+% 1. AISLAR LA SUBIDA (Rama izquierda)
 f_left = f_data(1:idx_max);
 A_left = A_data_norm(1:idx_max);
 
-% Modelo teorico (f0 constante)
-% x(1) = Amplitud neta, x(2) = Q, x(3) = Ruido de fondo (Offset)
-modelo_fijo = @(x, f) x(3) + x(1) ./ sqrt(1 + 4 * x(2)^2 * ((f - f0_fijo)./f0_fijo).^2);
+% 2. FILTRAR LA COLA LINEAL (Amplitudes < 60% para eludir el efecto Duffing)
+idx_limite = find(A_left <= 0.6, 1, 'last'); 
+if isempty(idx_limite)
+    idx_limite = length(A_left);
+end
+f_fit = f_left(1:idx_limite);
+A_fit = A_left(1:idx_limite);
 
-% Valores iniciales
+% 3. MODELO TEORICO LIBRE (4 Parámetros)
+% x(1) = Amp neta, x(2) = Q, x(3) = Offset, x(4) = f0_lineal (oculta)
+modelo_libre = @(x, f) x(3) + x(1) ./ sqrt(1 + 4 * x(2)^2 * ((f - x(4))./x(4)).^2);
+
+% Valores semilla (Adivinamos que el f0 real esta un poco a la izquierda)
 offset_guess = min(A_data_norm); 
-amp_guess = A_max_exp - offset_guess; 
-Q_guess = 396; 
+amp_guess = 1 - offset_guess; 
+Q_guess = 170; 
+f0_guess = f0_duffing - 0.05; 
 
-x0_fijo = [amp_guess, Q_guess, offset_guess]; 
+x0_libre = [amp_guess, Q_guess, offset_guess, f0_guess]; 
 
-% Ajuste no lineal (SOLO con f_left y A_left)
+% 4. AJUSTE NO LINEAL
 opciones = statset('nlinfit');
-x_final = nlinfit(f_left, A_left, modelo_fijo, x0_fijo, opciones);
+x_final = nlinfit(f_fit, A_fit, modelo_libre, x0_libre, opciones);
 
 % Resultados del ajuste
-A_max_fit = x_final(1);
 Q_teorico = x_final(2);
-ruido_fondo = x_final(3);
+f0_lineal = x_final(4); % LA VERDADERA FRECUENCIA NATURAL LINEAL
 
-figure('Name', 'Ajuste Teorico (Mitad Izquierda)', 'Color', 'w', 'Position', [300, 300, 700, 500]);
+figure('Name', 'Ajuste_Teorico_Mitad_Izquierda', 'Color', 'w', 'Position', [300, 300, 700, 500]);
 hold on; grid on; box on;
 
-% Dibujamos la curva teorica COMPLETA para comparar
+% Dibujamos la curva teorica COMPLETA extrapolada
 f_axis = linspace(min(f_data), max(f_data), 1000);
-plot(f_axis, modelo_fijo(x_final, f_axis), 'r-', 'LineWidth', 2, 'DisplayName', sprintf('Teoria Lineal (Q = %.0f)', Q_teorico));
+plot(f_axis, modelo_libre(x_final, f_axis), 'r-', 'LineWidth', 2, 'DisplayName', sprintf('Modelo Lineal Puro (Q = %.0f)', Q_teorico));
 
 % Puntos experimentales totales
 err_A = (1.0 ./ (2 * pi * f_data)) / A_max_real; 
 errorbar(f_data, A_data_norm, err_A, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 5, 'LineStyle', 'none', 'DisplayName', 'Datos Experimentales');
 
-% Resaltamos los puntos usados para el ajuste
-scatter(f_left, A_left, 40, 'b', 's', 'filled', 'DisplayName', 'Datos usados en el ajuste');
+% Resaltamos los puntos usados para el ajuste (la cola puramente lineal)
+scatter(f_fit, A_fit, 50, 'b', 's', 'filled', 'DisplayName', 'Datos régimen lineal (<60%)');
 
-xlabel('Frecuencia f (Hz)');
-ylabel('Amplitud Mecanica Normalizada');
-%title('Oscilador No Lineal vs Teoria Lineal Clasica');
-legend('Location', 'northwest');
-xlim([41.6, 42.6]); % Zoom al pico
+% Marcamos las dos frecuencias para evidenciar el desplazamiento
+xline(f0_lineal, 'r--', 'f_0 Lineal (Oculta)', 'LabelOrientation', 'horizontal', 'HandleVisibility', 'off');
+xline(f0_duffing, 'k--', 'f_0 Duffing (Medida)', 'LabelOrientation', 'horizontal', 'HandleVisibility', 'off');
 
-fprintf('\n--- ANALISIS DEL AJUSTE TEORICO (SUBIDA) ---\n');
-fprintf('Frecuencia de resonancia (Fijada): %.3f Hz\n', f0_fijo);
-fprintf('Factor de calidad (Regimen Lineal): %.1f\n', Q_teorico);
-fprintf('Ruido de fondo normalizado: %.3f\n\n', ruido_fondo);
+xlabel('Frecuencia f (Hz)', 'FontSize', 12);
+ylabel('Amplitud Mecanica Normalizada', 'FontSize', 12);
+title('\bf Extracción del Factor Q aislando la no-linealidad', 'FontSize', 14);
+legend('Location', 'northwest', 'FontSize', 11);
+xlim([41.6, 42.6]); 
+
+fprintf('\n--- ANALISIS DEL AJUSTE TEORICO LIBRE (R=100) ---\n');
+fprintf('Frecuencia pico medida (Duffing): %.3f Hz\n', f0_duffing);
+fprintf('Frecuencia natural lineal (Ajuste): %.3f Hz\n', f0_lineal);
+fprintf('Factor de calidad (Regimen Lineal): %.1f\n\n', Q_teorico);
 
 %% ========================================================================
 % 6. ANALISIS GLOBAL EN REGIMEN LINEAL (CORRECCION EFECTO DUFFING)
 % ========================================================================
-% Una vez demostrado el comportamiento no lineal en el apartado 5, 
-% aplicamos el ajuste de "solo subida" (regimen lineal) a todas las 
-% resistencias para obtener factores de calidad fisicamente realistas.
 
 freqs = {f_R10, f_R100, f_R1000, f_tierra};
 volts = {V_R10, V_R100, V_R1000, V_tierra};
 plot_labels = {'R = 10 \Omega', 'R = 100 \Omega', 'R = 1000 \Omega', 'Tierra'};
 colores = lines(4);
 
-figure('Name', 'Ajustes Regimen Lineal (Subida)', 'Color', 'w', 'Position', [150, 150, 800, 550]);
+figure('Name', 'Ajustes_Regimen_Lineal_Global', 'Color', 'w', 'Position', [150, 150, 800, 550]);
 hold on; grid on; box on;
 
-fprintf('\n--- RESULTADOS DEL Q EN REGIMEN LINEAL (EXCLUYENDO DUFFING) ---\n');
-
-Q_resultados = zeros(1, 4);
+fprintf('--- RESULTADOS DEL Q EN REGIMEN LINEAL GLOBAL ---\n');
 
 for i = 1:4
     f_data = freqs{i};
-    % 1. Reconstruir amplitud relativa mecanica
     A_data = volts{i} ./ (2 * pi * f_data);
-    
-    % 2. Normalizar
     A_max_real = max(A_data);
     A_data_norm = A_data / A_max_real;
     
-    % 3. Identificar el pico
-    [A_max_exp, idx_max] = max(A_data_norm);
-    f0_fijo = f_data(idx_max); 
+    [~, idx_max] = max(A_data_norm);
+    f0_duffing = f_data(idx_max); 
     
-    % 4. FILTRAR LA SUBIDA (Regimen Lineal)
     f_left = f_data(1:idx_max);
     A_left = A_data_norm(1:idx_max);
     
-    % 5. Modelo Teorico (Ahora el offset es x(3), un parametro LIBRE)
-    offset_guess = min(A_data_norm); 
-    amp_guess = A_max_exp - offset_guess; 
-    Q_guess = 180; % Estimacion mas cercana a la realidad
+    % Filtro lineal (<60%)
+    idx_limite = find(A_left <= 0.6, 1, 'last'); 
+    if isempty(idx_limite); idx_limite = length(A_left); end
+    f_fit = f_left(1:idx_limite);
+    A_fit = A_left(1:idx_limite);
     
-    modelo_fijo = @(x, f) x(3) + x(1) ./ sqrt(1 + 4 * x(2)^2 * ((f - f0_fijo)./f0_fijo).^2);
-    x0_fijo = [amp_guess, Q_guess, offset_guess]; 
-    
-    % 6. Ajuste No Lineal
-    opciones = statset('nlinfit'); 
+    modelo_libre = @(x, f) x(3) + x(1) ./ sqrt(1 + 4 * x(2)^2 * ((f - x(4))./x(4)).^2);
+    x0_libre = [1-min(A_data_norm), 175, min(A_data_norm), f0_duffing - 0.05]; 
     
     try
-        x_final = nlinfit(f_left, A_left, modelo_fijo, x0_fijo, opciones);
+        x_final = nlinfit(f_fit, A_fit, modelo_libre, x0_libre, statset('nlinfit'));
         Q_fit = x_final(2);
-        ruido_fit = x_final(3);
+        f0_lineal = x_final(4); 
     catch
-        Q_fit = NaN; 
+        Q_fit = NaN; f0_lineal = f0_duffing;
     end
-    
-    Q_resultados(i) = Q_fit;
-    fprintf('%s -> f0 = %.3f Hz | Q_lineal = %.1f\n', plot_labels{i}, f0_fijo, Q_fit);
-    
-    % 7. Graficar (Centrado en Delta f = 0 para poder compararlas bien)
+
+    fprintf('%s -> f0_lineal = %.3f Hz | Q = %.1f\n', plot_labels{i}, f0_lineal, Q_fit);
+
+    % Graficar centrando respecto a la frecuencia lineal VERDADERA
     f_axis = linspace(min(f_data), max(f_data), 500);
-    f_centrado = f_axis - f0_fijo;
-    plot(f_centrado, modelo_fijo(x_final, f_axis), '-', 'Color', colores(i,:), 'LineWidth', 1.5, 'DisplayName', sprintf('%s (Q = %.0f)', plot_labels{i}, Q_fit));
+    f_centrado = f_axis - f0_lineal;
+    plot(f_centrado, modelo_libre(x_final, f_axis), '-', 'Color', colores(i,:), 'LineWidth', 1.5, 'DisplayName', sprintf('%s (Q = %.0f)', plot_labels{i}, Q_fit));
     
-    % Dibujar los puntos experimentales (tambien centrados)
     err_A = (1.0 ./ (2 * pi * f_data)) / A_max_real;
-    errorbar(f_data - f0_fijo, A_data_norm, err_A, 'o', 'Color', colores(i,:), 'MarkerFaceColor', colores(i,:), 'MarkerSize', 5, 'LineStyle', 'none', 'HandleVisibility', 'off');
+    errorbar(f_data - f0_lineal, A_data_norm, err_A, 'o', 'Color', colores(i,:), 'MarkerFaceColor', colores(i,:), 'MarkerSize', 5, 'LineStyle', 'none', 'HandleVisibility', 'off');
 end
 
-xlabel('Desplazamiento de frecuencia \Delta f = f - f_0 (Hz)');
-ylabel('Amplitud Mecanica Normalizada');
-title('Ajuste Global en Regimen Lineal (Efecto Duffing Excluido)');
+xlabel('Desplazamiento real \Delta f = f - f_{0,lineal} (Hz)', 'FontSize', 12);
+ylabel('Amplitud Mecanica Normalizada', 'FontSize', 12);
+title('\bf Ajuste Global en Regimen Lineal (Alineado por f_{0,lineal})', 'FontSize', 14);
 legend('Location', 'northeast');
 xlim([-0.4, 0.4]);
-
-
 
 %% ========================================================================
 % 7. DEMOSTRACIÓN DEL EFECTO DUFFING: FWHM vs REGIMEN LINEAL
 % ========================================================================
-% Usaremos R = 1000 Ohms como caso representativo para ilustrar el problema
 
 f_data = f_R1000;
 A_data = V_R1000 ./ (2 * pi * f_data);
 A_max_real = max(A_data);
 A_data_norm = A_data / A_max_real;
 
-% CÁLCULO CLÁSICO: Método FWHM (Ancho a Media Altura)
-% Interpolamos para tener precisión en el corte
+% --- CÁLCULO CLÁSICO: FWHM ---
 f_dense = linspace(min(f_data), max(f_data), 5000);
-A_spline = spline(f_data, A_data_norm, f_dense);
-
+A_spline = pchip(f_data, A_data_norm, f_dense); % Usamos pchip mejor que spline
 [~, idx_max_spline] = max(A_spline);
-f0_exp = f_dense(idx_max_spline);
+f0_duffing = f_dense(idx_max_spline);
 
-% El corte de media potencia en amplitud es a 1/sqrt(2) = 0.707
 nivel_FWHM = 1 / sqrt(2); 
-
 idx_left = find(A_spline(1:idx_max_spline) <= nivel_FWHM, 1, 'last');
 idx_right = find(A_spline(idx_max_spline:end) <= nivel_FWHM, 1, 'first') + idx_max_spline - 1;
 
 f_left_FWHM = f_dense(idx_left);
 f_right_FWHM = f_dense(idx_right);
 delta_f_FWHM = f_right_FWHM - f_left_FWHM;
+Q_FWHM = f0_duffing / delta_f_FWHM;
 
-Q_FWHM = f0_exp / delta_f_FWHM;
-
-% CÁLCULO CORREGIDO: Ajuste Lineal (Solo subida)
+% --- CÁLCULO CORREGIDO: Ajuste Libre de 4 parámetros ---
 [~, idx_max_data] = max(A_data_norm);
 f_left_data = f_data(1:idx_max_data);
 A_left_data = A_data_norm(1:idx_max_data);
 
-offset_guess = min(A_data_norm); 
-modelo_fijo = @(x, f) x(3) + x(1) ./ sqrt(1 + 4 * x(2)^2 * ((f - f0_exp)./f0_exp).^2);
-x0_fijo = [1 - offset_guess, 175, offset_guess]; 
+idx_limite = find(A_left_data <= 0.6, 1, 'last'); 
+if isempty(idx_limite); idx_limite = length(A_left_data); end
 
-opciones = statset('nlinfit'); 
-x_final = nlinfit(f_left_data, A_left_data, modelo_fijo, x0_fijo, opciones);
-Q_lineal = x_final(2);
+modelo_libre = @(x, f) x(3) + x(1) ./ sqrt(1 + 4 * x(2)^2 * ((f - x(4))./x(4)).^2);
+x0_libre = [1-min(A_data_norm), 175, min(A_data_norm), f0_duffing - 0.05]; 
+x_final_libre = nlinfit(f_left_data(1:idx_limite), A_left_data(1:idx_limite), modelo_libre, x0_libre, statset('nlinfit'));
+
+Q_lineal = x_final_libre(2);
+f0_lineal = x_final_libre(4);
 
 % ========================================================================
 % REPRESENTACIÓN GRÁFICA COMPARATIVA
 % ========================================================================
-figure('Name', 'Demostracion Duffing', 'Color', 'w', 'Position', [200, 200, 750, 550]);
+figure('Name', 'Demostracion_Duffing', 'Color', 'w', 'Position', [200, 200, 750, 550]);
 hold on; grid on; box on;
 
-% Curva suave de los datos
-plot(f_dense, A_spline, 'k--', 'LineWidth', 1, 'HandleVisibility', 'off');
+% Curva suave de los datos (El perfil deformado)
+plot(f_dense, A_spline, 'k--', 'LineWidth', 1.5, 'HandleVisibility', 'off');
 
-% Calculamos el error en Y (1 mV del osciloscopio escalado y normalizado)
+% Puntos experimentales
 err_A = (1.0 ./ (2 * pi * f_data)) / A_max_real;
+errorbar(f_data, A_data_norm, err_A, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'LineStyle', 'none', 'DisplayName', 'Datos Exp. (Duffing)');
 
-% Puntos experimentales con barras de error
-errorbar(f_data, A_data_norm, err_A, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize', 6, 'LineStyle', 'none', 'DisplayName', 'Datos Exp. \pm Error');
-
-% Curva del modelo lineal ideal
-plot(f_dense, modelo_fijo(x_final, f_dense), 'r-', 'LineWidth', 2, 'DisplayName', sprintf('Comportamiento Lineal Ideal (Q = %.0f)', Q_lineal));
+% Curva teórica lineal extrapolada
+plot(f_dense, modelo_libre(x_final_libre, f_dense), 'r-', 'LineWidth', 2, 'DisplayName', sprintf('Curva Lineal Pura (Q = %.0f)', Q_lineal));
 
 % Marcamos el ancho FWHM (El error)
-plot([f_left_FWHM, f_right_FWHM], [nivel_FWHM, nivel_FWHM], 'b-', 'LineWidth', 2.5, 'DisplayName', sprintf('Ancho FWHM Deformado (Q = %.0f)', Q_FWHM));
+plot([f_left_FWHM, f_right_FWHM], [nivel_FWHM, nivel_FWHM], 'b-', 'LineWidth', 2.5, 'DisplayName', sprintf('FWHM Deformado (Q_{falso} = %.0f)', Q_FWHM));
 plot([f_left_FWHM, f_right_FWHM], [nivel_FWHM, nivel_FWHM], 'bo', 'MarkerFaceColor', 'b', 'HandleVisibility', 'off');
-
-% Linea teórica de dónde debería estar el corte derecho si fuera lineal
-f_right_ideal = f0_exp + (f0_exp - f_left_FWHM); % Asumiendo simetría perfecta
-plot([f_right_FWHM, f_right_ideal], [nivel_FWHM, nivel_FWHM], 'r:', 'LineWidth', 2, 'DisplayName', 'Ancho Real "Oculto"');
 
 xlabel('Frecuencia f (Hz)', 'FontSize', 12);
 ylabel('Amplitud Mecanica Normalizada', 'FontSize', 12);
-%title('Impacto del Efecto Duffing en el Cálculo del Factor Q (R = 100 \Omega)', 'FontSize', 14);
-legend('Location', 'southwest', 'FontSize', 11);
+title('\bf Impacto del Efecto Duffing en el Factor Q', 'FontSize', 14);
+legend('Location', 'northwest', 'FontSize', 11);
 xlim([42.15, 42.6]);
 
 fprintf('\n--- COMPARATIVA DE METODOS (Demostración Duffing) ---\n');
 fprintf('Q Asumiendo linealidad (Método FWHM): %.1f\n', Q_FWHM);
 fprintf('Q Real filtrando la no-linealidad: %.1f\n', Q_lineal);
-fprintf('Error introducido por el efecto Duffing: +%.1f%%\n\n', ((Q_FWHM - Q_lineal)/Q_lineal)*100);
-
+fprintf('Error introducido por la campana deformada: +%.1f%%\n\n', ((Q_FWHM - Q_lineal)/Q_lineal)*100);
 
 %% ========================================================================
 % 8. CONFIRMACIÓN SISTEMÁTICA DEL EFECTO DUFFING (CURVA BACKBONE)
