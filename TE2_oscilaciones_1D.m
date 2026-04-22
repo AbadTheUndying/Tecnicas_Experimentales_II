@@ -308,7 +308,7 @@ A_data_norm = A_data / A_max_real;
 [A_max_exp, idx_max] = max(A_data_norm);
 f0_fijo = f_data(idx_max); 
 
-% LA MAGIA: Filtramos los datos para ajustar SOLO la parte izquierda (subida)
+% Filtramos los datos para ajustar solo la parte izquierda (subida)
 % Esto evita que la caida asimetrica (no-linealidad) rompa el ajuste
 f_left = f_data(1:idx_max);
 A_left = A_data_norm(1:idx_max);
@@ -349,9 +349,9 @@ scatter(f_left, A_left, 40, 'b', 's', 'filled', 'DisplayName', 'Datos usados en 
 
 xlabel('Frecuencia f (Hz)');
 ylabel('Amplitud Mecanica Normalizada');
-title('Oscilador No Lineal vs Teoria Lineal Clasica');
-legend('Location', 'northeast');
-xlim([42.15, 42.6]); % Zoom al pico
+%title('Oscilador No Lineal vs Teoria Lineal Clasica');
+legend('Location', 'northwest');
+xlim([41.6, 42.6]); % Zoom al pico
 
 fprintf('\n--- ANALISIS DEL AJUSTE TEORICO (SUBIDA) ---\n');
 fprintf('Frecuencia de resonancia (Fijada): %.3f Hz\n', f0_fijo);
@@ -437,10 +437,10 @@ xlim([-0.4, 0.4]);
 %% ========================================================================
 % 7. DEMOSTRACIÓN DEL EFECTO DUFFING: FWHM vs REGIMEN LINEAL
 % ========================================================================
-% Usaremos R = 100 Ohms como caso representativo para ilustrar el problema
+% Usaremos R = 1000 Ohms como caso representativo para ilustrar el problema
 
-f_data = f_R100;
-A_data = V_R100 ./ (2 * pi * f_data);
+f_data = f_R1000;
+A_data = V_R1000 ./ (2 * pi * f_data);
 A_max_real = max(A_data);
 A_data_norm = A_data / A_max_real;
 
@@ -505,8 +505,8 @@ plot([f_right_FWHM, f_right_ideal], [nivel_FWHM, nivel_FWHM], 'r:', 'LineWidth',
 
 xlabel('Frecuencia f (Hz)', 'FontSize', 12);
 ylabel('Amplitud Mecanica Normalizada', 'FontSize', 12);
-title('Impacto del Efecto Duffing en el Cálculo del Factor Q (R = 100 \Omega)', 'FontSize', 14);
-legend('Location', 'northeast', 'FontSize', 11);
+%title('Impacto del Efecto Duffing en el Cálculo del Factor Q (R = 100 \Omega)', 'FontSize', 14);
+legend('Location', 'southwest', 'FontSize', 11);
 xlim([42.15, 42.6]);
 
 fprintf('\n--- COMPARATIVA DE METODOS (Demostración Duffing) ---\n');
