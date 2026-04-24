@@ -5,7 +5,7 @@ clc; clear; close all;
 set(0, 'DefaultTextInterpreter', 'tex');
 set(0, 'DefaultAxesTickLabelInterpreter', 'tex');
 set(0, 'DefaultLegendInterpreter', 'tex');
-set(0, 'DefaultAxesFontSize', 12);
+set(0, 'DefaultAxesFontSize', 14);
 set(0, 'DefaultLineLineWidth', 1.5);
 
 
@@ -63,12 +63,12 @@ plot(n_cobre, polyval(p_cobre, n_cobre), 'r-', 'LineWidth', 1.5, 'DisplayName', 
 errorbar(n_cobre, f_cobre, f_err_cobre, 'rs', 'MarkerFaceColor', 'r', 'MarkerEdgeColor', 'k', 'MarkerSize', 7, 'LineStyle', 'none', 'DisplayName', 'Datos exp. (Cobre)');
 
 % Para que quede claro en la leyenda qué es la línea punteada
-plot(NaN, NaN, 'k:', 'LineWidth', 1.5, 'DisplayName', 'Predicción Teórica');
+%plot(NaN, NaN, 'k:', 'LineWidth', 1.5, 'DisplayName', 'Predicción Teórica');
 
-xlabel('Número de modo normal (n)', 'FontSize', 11);
-ylabel('Frecuencia de resonancia f_n (Hz)', 'FontSize', 11);
-title('Relación Lineal: Frecuencia vs Modo Normal', 'FontSize', 14);
-legend('Location', 'northwest', 'FontSize', 10);
+xlabel('Número de modo normal (n)');
+ylabel('Frecuencia de resonancia f_n (Hz)');
+%title('Relación Lineal: Frecuencia vs Modo Normal', 'FontSize', 14);
+legend('Location', 'northwest');
 xlim([0, 6]); ylim([0, 250]);
 
 % 5. OUTPUT POR CONSOLA 
@@ -160,10 +160,10 @@ for i = 1:4
         'MarkerFaceColor', colores(i,:), 'MarkerSize', 5, 'LineStyle', 'none', 'HandleVisibility', 'off'); 
 end
 
-xlabel('Desplazamiento de frecuencia \Delta f = f - f_{0} (Hz)', 'FontSize', 12);
-ylabel('Voltaje inducido V_{rms} (mV)', 'FontSize', 12);
-title('\bf Curvas de Resonancia Centradas: Efecto de la Resistencia', 'FontSize', 14);
-legend('Location', 'northeast');
+xlabel('Desplazamiento de frecuencia \Delta f = f - f_{0} (Hz)');
+ylabel('Voltaje inducido V_{rms} (mV)');
+%title('\bf Curvas de Resonancia Centradas: Efecto de la Resistencia', 'FontSize', 14);
+legend('Location', 'southwest');
 xlim([-0.3, 0.3]);
 ylim([0, 35]); % Forzamos que el eje Y empiece en 0 para más claridad física
 
@@ -204,7 +204,7 @@ plot(d_fit, V_fit, 'r-', 'LineWidth', 1.5, 'DisplayName', sprintf('Ajuste: V = %
 
 xlabel('Distancia d (cm)');
 ylabel('Voltaje Inducido V_{pico} (mV) [Escala Log]');
-title('Atenuación (Comprobación Exponencial)');
+%title('Atenuación (Comprobación Exponencial)');
 legend('Location', 'northeast');
 
 % -------------------------------------------------------------------------
@@ -224,16 +224,16 @@ V_extrap = V0 * exp(-alpha * d_extrap);
 plot(d_extrap, V_extrap, 'r-', 'LineWidth', 1.5, 'DisplayName', 'Ajuste Teórico');
 
 % Dibujamos una línea asintótica en y = 0 para enfatizar el infinito
-yline(0, 'b--', 'Asíntota V \to 0 (Lejos del campo)', 'LabelHorizontalAlignment', 'right', 'HandleVisibility', 'off');
+yline(0, 'b--', 'DisplayName','Asintota Horizontal');
 
 xlabel('Distancia d (cm)');
 ylabel('Voltaje Inducido V_{pico} (mV) [Escala Lineal]');
-title('Extrapolación a Distancia Infinita');
+%title('Extrapolación a Distancia Infinita');
 legend('Location', 'northeast');
 xlim([0, 15]); % Forzamos a mostrar hasta 15 cm
 ylim([-2, 45]); % Dejamos un margen negativo para ver la asíntota
 
-sgtitle('\bf Sensibilidad y Decaimiento del Campo Magnetico', 'FontSize', 14);
+%sgtitle('\bf Sensibilidad y Decaimiento del Campo Magnetico', 'FontSize', 14);
 
 fprintf('\n--- LEY DE DECAIMIENTO MAGNETICO (EXPONENCIAL) ---\n');
 fprintf('El voltaje decae exponencialmente con coeficiente de atenuacion alpha = %.3f cm^-1\n\n', alpha);
@@ -300,13 +300,13 @@ errorbar(f_data, A_data_norm, err_A, 'ko', 'MarkerFaceColor', 'k', 'MarkerSize',
 scatter(f_fit, A_fit, 50, 'b', 's', 'filled', 'DisplayName', 'Datos régimen lineal (<60%)');
 
 % Marcamos las dos frecuencias para evidenciar el desplazamiento
-xline(f0_lineal, 'r--', 'f_0 Lineal (Oculta)', 'LabelOrientation', 'horizontal', 'HandleVisibility', 'off');
-xline(f0_duffing, 'k--', 'f_0 Duffing (Medida)', 'LabelOrientation', 'horizontal', 'HandleVisibility', 'off');
+xline(f0_lineal, 'r--', 'f_0 Lineal', 'LabelOrientation', 'horizontal', 'HandleVisibility', 'off');
+xline(f0_duffing, 'k--', 'f_0 Duffing', 'LabelOrientation', 'horizontal', 'HandleVisibility', 'off');
 
-xlabel('Frecuencia f (Hz)', 'FontSize', 12);
-ylabel('Amplitud Mecanica Normalizada', 'FontSize', 12);
-title('\bf Extracción del Factor Q aislando la no-linealidad', 'FontSize', 14);
-legend('Location', 'northwest', 'FontSize', 11);
+xlabel('Frecuencia f (Hz)');
+ylabel('Amplitud Mecanica Normalizada');
+%title('\bf Extracción del Factor Q aislando la no-linealidad', 'FontSize', 14);
+legend('Location', 'northwest');
 xlim([41.6, 42.6]); 
 
 fprintf('\n--- ANALISIS DEL AJUSTE TEORICO LIBRE (R=100) ---\n');
@@ -368,10 +368,10 @@ for i = 1:4
     errorbar(f_data - f0_lineal, A_data_norm, err_A, 'o', 'Color', colores(i,:), 'MarkerFaceColor', colores(i,:), 'MarkerSize', 5, 'LineStyle', 'none', 'HandleVisibility', 'off');
 end
 
-xlabel('Desplazamiento real \Delta f = f - f_{0,lineal} (Hz)', 'FontSize', 12);
-ylabel('Amplitud Mecanica Normalizada', 'FontSize', 12);
-title('\bf Ajuste Global en Regimen Lineal (Alineado por f_{0,lineal})', 'FontSize', 14);
-legend('Location', 'northeast');
+xlabel('Desplazamiento real \Delta f = f - f_{0,lineal} (Hz)');
+ylabel('Amplitud Mecanica Normalizada');
+%title('\bf Ajuste Global en Regimen Lineal (Alineado por f_{0,lineal})', 'FontSize', 14);
+legend('Location', 'northwest');
 xlim([-0.4, 0.4]);
 
 %% ========================================================================
@@ -433,10 +433,10 @@ plot(f_dense, modelo_libre(x_final_libre, f_dense), 'r-', 'LineWidth', 2, 'Displ
 plot([f_left_FWHM, f_right_FWHM], [nivel_FWHM, nivel_FWHM], 'b-', 'LineWidth', 2.5, 'DisplayName', sprintf('FWHM Deformado (Q_{falso} = %.0f)', Q_FWHM));
 plot([f_left_FWHM, f_right_FWHM], [nivel_FWHM, nivel_FWHM], 'bo', 'MarkerFaceColor', 'b', 'HandleVisibility', 'off');
 
-xlabel('Frecuencia f (Hz)', 'FontSize', 12);
-ylabel('Amplitud Mecanica Normalizada', 'FontSize', 12);
-title('\bf Impacto del Efecto Duffing en el Factor Q', 'FontSize', 14);
-legend('Location', 'northwest', 'FontSize', 11);
+xlabel('Frecuencia f (Hz)');
+ylabel('Amplitud Mecanica Normalizada');
+%title('\bf Impacto del Efecto Duffing en el Factor Q', 'FontSize', 14);
+legend('Location', 'northwest');
 xlim([42.15, 42.6]);
 
 fprintf('\n--- COMPARATIVA DE METODOS (Demostración Duffing) ---\n');
@@ -512,10 +512,10 @@ text(f_center, y_cota + 0.035, sprintf('\\Delta f_0 = +%.2f Hz', f_peak_4V - f_p
     
 % Elemento invisible para que aparezca el concepto en la leyenda con elegancia
 plot(NaN, NaN, 'k-', 'LineWidth', 1.2, 'DisplayName', 'Desplazamiento no lineal');
-xlabel('Frecuencia f (Hz)', 'FontSize', 12);
-ylabel('Amplitud Mecánica Relativa A \propto V_{rms}/f', 'FontSize', 12);
-title('\bf Efecto Duffing: Desplazamiento de f_0 con la Amplitud (R = 10 \Omega)', 'FontSize', 14);
-legend('Location', 'northwest', 'FontSize', 11);
+xlabel('Frecuencia f (Hz)');
+ylabel('Amplitud Mecánica Relativa A \propto V_{rms}/f');
+%title('\bf Efecto Duffing: Desplazamiento de f_0 con la Amplitud (R = 10 \Omega)', 'FontSize', 14);
+legend('Location', 'northwest');
 xlim([42.0, 42.6]);
 
 % =========================================================================
